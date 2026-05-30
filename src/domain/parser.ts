@@ -15,11 +15,22 @@ const NON_LEG_PREFIXES = [
   'bet placed on',
   'tomorrow',
   'today',
-  'pending',
   'sportsbet',
   'what are you prepared',
   'set a deposit limit',
 ];
+
+const NOISE_PREFIXES = [
+  'pending',
+  'selection boosted',
+  'boosted',
+  'odds',
+  'stake',
+  'return',
+  'cash out',
+];
+
+const UNKNOWN_MARKET_WORD_PATTERN = /\b(market|line|points?|rebounds?|assists?|threes?|steals?|blocks?|made|score|record|total|spread)\b/i;
 
 export function parseSlipText(text: string): Slip {
   const lines = text
@@ -39,14 +50,19 @@ export function parseSlipText(text: string): Slip {
 
   const legs: NormalizedLeg[] = [];
 
-  for (let index = 0; index < candidateLines.length - 1; index += 1) {
+  for (let index = 0; index < candidateLines.length; index += 1) {
     const player = candidateLines[index];
-    const label = candidateLines[index + 1];
 
-    if (!looksLikePlayerName(player) || !looksLikeMarketLabel(label)) {
+    if (!looksLikePlayerName(player)) {
       continue;
     }
 
+    const labelIndex = findMarketLabelIndex(candidateLines, index + 1);
+    if (labelIndex === undefined) {
+      continue;
+    }
+
+    const label = candidateLines[labelIndex];
     const parsedMarket = parseMarketLabel(label);
     legs.push({
       id: `leg-${legs.length + 1}`,
@@ -55,14 +71,14 @@ export function parseSlipText(text: string): Slip {
       marketFamily: parsedMarket.family,
       threshold: parsedMarket.threshold,
       label,
-      sourceText: `${player}\n${label}`,
+      sourceText: candidateLines.slice(index, labelIndex + 1).join('\n'),
     });
 
-    index += 1;
+    index = labelIndex;
   }
 
   return {
-    id: `slip-${Date.now()}`,
+    id: createSlipId(text),
     title: totalOdds ? `Same Game Multi @ ${totalOdds.toFixed(2)}` : 'Imported Sportsbet Slip',
     game,
     stake,
@@ -82,11 +98,60 @@ function extractNumberAfter(text: string, pattern: RegExp): number | undefined {
 }
 
 function looksLikePlayerName(line: string): boolean {
-  return /^[A-Z][A-Za-z'.-]+(?:\s+[A-Z][A-Za-z'.-]+)+$/.test(line);
+  return /^\p{Lu}[\p{L}'.-]+(?:\s+\p{Lu}[\p{L}'.-]+)+$/u.test(line);
 }
 
-function looksLikeMarketLabel(line: string): boolean {
-  return Boolean(line);
+function findMarketLabelIndex(lines: string[], startIndex: number): number | undefined {
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (isSkippableNoiseLine(line)) {
+      continue;
+    }
+
+    if (parseMarketLabel(line).family !== 'unknown' || looksLikeUnknownMarketLabel(line)) {
+      return index;
+    }
+
+    if (looksLikePlayerName(line)) {
+      if (hasKnownMarketAhead(lines, index + 1)) {
+        return undefined;
+      }
+
+      return looksLikePlayerNameMarketFallback(line) ? index : undefined;
+    }
+
+    return undefined;
+  }
+
+  return undefined;
+}
+
+function looksLikeUnknownMarketLabel(line: string): boolean {
+  return Boolean(line) && !looksLikePlayerName(line) && !isSkippableNoiseLine(line);
+}
+
+function looksLikePlayerNameMarketFallback(line: string): boolean {
+  return UNKNOWN_MARKET_WORD_PATTERN.test(line);
+}
+
+function hasKnownMarketAhead(lines: string[], startIndex: number): boolean {
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (isSkippableNoiseLine(line)) {
+      continue;
+    }
+
+    return parseMarketLabel(line).family !== 'unknown';
+  }
+
+  return false;
+}
+
+function isSkippableNoiseLine(line: string): boolean {
+  const lower = line.toLowerCase();
+  return NOISE_PREFIXES.some((prefix) => lower.startsWith(prefix)) || /^\$?[\d,.]+$/.test(line);
 }
 
 function parseMarketLabel(label: string): { family: MarketFamily; threshold?: number } {
@@ -101,4 +166,13 @@ function parseMarketLabel(label: string): { family: MarketFamily; threshold?: nu
   }
 
   return { family: 'unknown' };
+}
+
+function createSlipId(text: string): string {
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) >>> 0;
+  }
+
+  return `slip-${hash.toString(36)}`;
 }

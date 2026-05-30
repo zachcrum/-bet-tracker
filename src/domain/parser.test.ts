@@ -47,4 +47,88 @@ describe('parseSlipText', () => {
     expect(slip.legs[0].marketFamily).toBe('unknown');
     expect(slip.legs[0].label).toBe('Mystery Market');
   });
+
+  it('does not treat adjacent player names as unknown labels', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 12.00
+Player One
+Player Two
+To Score 20+ Points
+`);
+
+    expect(slip.legs).toHaveLength(1);
+    expect(slip.legs[0]).toMatchObject({
+      player: 'Player Two',
+      marketFamily: 'points',
+      threshold: 20,
+      label: 'To Score 20+ Points',
+    });
+  });
+
+  it('skips noisy status and odds lines between player and label', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 25.00
+San Antonio Spurs @ Oklahoma City Thunder
+Victor Wembanyama
+Pending
+$1.34
+Selection boosted
+To Record 10+ Rebounds
+`);
+
+    expect(slip.legs).toHaveLength(1);
+    expect(slip.legs[0]).toMatchObject({
+      player: 'Victor Wembanyama',
+      marketFamily: 'rebounds',
+      threshold: 10,
+      label: 'To Record 10+ Rebounds',
+    });
+    expect(slip.legs[0].sourceText).toBe(
+      'Victor Wembanyama\nPending\n$1.34\nSelection boosted\nTo Record 10+ Rebounds',
+    );
+  });
+
+  it('skips players with missing market lines', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 18.00
+Player One
+Player Two
+To Record 6+ Assists
+`);
+
+    expect(slip.legs).toHaveLength(1);
+    expect(slip.legs[0].player).toBe('Player Two');
+  });
+
+  it('does not create unknown legs from adjacent player names without labels', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 18.00
+Player One
+Player Two
+`);
+
+    expect(slip.legs).toHaveLength(0);
+  });
+
+  it('preserves accents in player names', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 14.00
+José Alvarado
+To Record 2+ Steals
+`);
+
+    expect(slip.legs[0]).toMatchObject({
+      player: 'José Alvarado',
+      marketFamily: 'steals',
+      threshold: 2,
+    });
+  });
+
+  it('creates a deterministic slip id from the source text', () => {
+    const firstSlip = parseSlipText(sampleSlip);
+    const secondSlip = parseSlipText(sampleSlip);
+
+    expect(firstSlip.id).toBe(secondSlip.id);
+    expect(firstSlip.id).toMatch(/^slip-[a-z0-9]+$/);
+  });
 });
