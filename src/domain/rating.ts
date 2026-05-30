@@ -50,11 +50,10 @@ export function rateLeg(leg: NormalizedLeg): RatedLeg {
     reasons.push('Market could not be classified from the slip text.');
   }
 
-  const estimatedProbability = probabilityFromScore(score);
-  const impliedProbability = leg.odds ? decimalOddsToImpliedProbability(leg.odds) : undefined;
-  const edge = impliedProbability === undefined ? undefined : estimatedProbability - impliedProbability;
-
   const finalScore = clamp(Math.round(score), 1, 10);
+  const estimatedProbability = probabilityFromScore(finalScore);
+  const impliedProbability = leg.odds !== undefined ? decimalOddsToImpliedProbability(leg.odds) : undefined;
+  const edge = impliedProbability === undefined ? undefined : estimatedProbability - impliedProbability;
 
   return {
     ...leg,
