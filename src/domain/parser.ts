@@ -120,15 +120,13 @@ function findMarketLabelIndex(lines: string[], startIndex: number): number | und
 
       return looksLikePlayerNameMarketFallback(line) ? index : undefined;
     }
-
-    return undefined;
   }
 
   return undefined;
 }
 
 function looksLikeUnknownMarketLabel(line: string): boolean {
-  return Boolean(line) && !looksLikePlayerName(line) && !isSkippableNoiseLine(line);
+  return Boolean(line) && !looksLikePlayerName(line) && !isSkippableNoiseLine(line) && UNKNOWN_MARKET_WORD_PATTERN.test(line);
 }
 
 function looksLikePlayerNameMarketFallback(line: string): boolean {

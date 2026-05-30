@@ -88,6 +88,27 @@ To Record 10+ Rebounds
     );
   });
 
+  it('skips arbitrary OCR text between player and real market label', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 21.00
+Victor Wembanyama
+Tap to add more selections
+sgm carousel item
+To Record 4+ Blocks
+`);
+
+    expect(slip.legs).toHaveLength(1);
+    expect(slip.legs[0]).toMatchObject({
+      player: 'Victor Wembanyama',
+      marketFamily: 'blocks',
+      threshold: 4,
+      label: 'To Record 4+ Blocks',
+    });
+    expect(slip.legs[0].sourceText).toBe(
+      'Victor Wembanyama\nTap to add more selections\nsgm carousel item\nTo Record 4+ Blocks',
+    );
+  });
+
   it('skips players with missing market lines', () => {
     const slip = parseSlipText(`
 Same Game Multi @ 18.00
@@ -108,6 +129,24 @@ Player Two
 `);
 
     expect(slip.legs).toHaveLength(0);
+  });
+
+  it('does not create unknown legs from arbitrary text before another player', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 18.00
+Player One
+Tap to add more selections
+sgm carousel item
+Player Two
+To Score 20+ Points
+`);
+
+    expect(slip.legs).toHaveLength(1);
+    expect(slip.legs[0]).toMatchObject({
+      player: 'Player Two',
+      marketFamily: 'points',
+      label: 'To Score 20+ Points',
+    });
   });
 
   it('preserves accents in player names', () => {
