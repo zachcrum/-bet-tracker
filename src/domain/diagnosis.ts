@@ -4,8 +4,9 @@ import type { RatedLeg, Slip, SlipDiagnosis } from './types';
 export function diagnoseSlip(slip: Slip): SlipDiagnosis {
   const ratedLegs = rateLegs(slip.legs);
   const sortedByScore = [...ratedLegs].sort((a, b) => b.score - a.score);
+  const sortedByWeakest = [...ratedLegs].sort((a, b) => a.score - b.score);
   const strongestLegIds = sortedByScore.slice(0, 3).map((leg) => leg.id);
-  const weakestLegIds = sortedByScore.slice(-3).map((leg) => leg.id);
+  const weakestLegIds = sortedByWeakest.slice(0, 3).map((leg) => leg.id);
   const riskTags = collectSlipRiskTags(ratedLegs);
 
   return {
@@ -27,8 +28,9 @@ function collectSlipRiskTags(legs: RatedLeg[]): string[] {
       tags.add(tag);
     }
 
-    if (leg.player) {
-      playerCounts.set(leg.player, (playerCounts.get(leg.player) ?? 0) + 1);
+    const normalizedPlayer = normalizePlayerName(leg.player);
+    if (normalizedPlayer) {
+      playerCounts.set(normalizedPlayer, (playerCounts.get(normalizedPlayer) ?? 0) + 1);
     }
   }
 
@@ -45,6 +47,11 @@ function collectSlipRiskTags(legs: RatedLeg[]): string[] {
   }
 
   return [...tags];
+}
+
+function normalizePlayerName(player: string | undefined): string | undefined {
+  const normalized = player?.trim().replace(/\s+/g, ' ').toLowerCase();
+  return normalized || undefined;
 }
 
 function buildSummary(slip: Slip, legs: RatedLeg[], riskTags: string[]): string {
