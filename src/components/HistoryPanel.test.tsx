@@ -44,4 +44,14 @@ describe('HistoryPanel', () => {
 
     expect(onSettleSlip).toHaveBeenCalledWith(slips[0], -15.5);
   });
+
+  it('does not settle a slip with a blank profit/loss value', async () => {
+    const user = userEvent.setup();
+    const onSettleSlip = vi.fn();
+    render(<HistoryPanel slips={slips} onSettleSlip={onSettleSlip} />);
+
+    await user.click(screen.getByRole('button', { name: 'Settle Same Game Multi @ 10.00' }));
+
+    expect(onSettleSlip).not.toHaveBeenCalled();
+  });
 });

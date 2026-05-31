@@ -54,7 +54,12 @@ export function HistoryPanel({ slips, onSettleSlip }: HistoryPanelProps) {
                 className="settle-form"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  const profitLoss = Number(profitLossBySlip[slipKey(slip)] ?? slip.profitLoss ?? '');
+                  const inputValue = profitLossBySlip[slipKey(slip)] ?? formatInputValue(slip.profitLoss);
+                  if (inputValue.trim() === '') {
+                    return;
+                  }
+
+                  const profitLoss = Number(inputValue);
                   if (Number.isFinite(profitLoss)) {
                     onSettleSlip?.(slip, profitLoss);
                   }
