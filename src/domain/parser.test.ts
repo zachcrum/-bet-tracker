@@ -88,6 +88,95 @@ To Record 10+ Rebounds
     );
   });
 
+  it('captures decimal odds skipped between player and market label', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 25.00
+Victor Wembanyama
+Pending
+$1.34
+To Record 10+ Rebounds
+`);
+
+    expect(slip.legs).toHaveLength(1);
+    expect(slip.legs[0]).toMatchObject({
+      player: 'Victor Wembanyama',
+      marketFamily: 'rebounds',
+      threshold: 10,
+      odds: 1.34,
+    });
+  });
+
+  it('captures decimal odds immediately after a market label', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 18.00
+Jalen Brunson
+To Score 25+ Points
+@ 1.72
+Josh Hart
+2+ Assists
+1.45
+Stake $10.00
+Potential Winnings $180.00
+`);
+
+    expect(slip.totalOdds).toBe(18);
+    expect(slip.stake).toBe(10);
+    expect(slip.potentialPayout).toBe(180);
+    expect(slip.legs).toHaveLength(2);
+    expect(slip.legs[0]).toMatchObject({
+      player: 'Jalen Brunson',
+      marketFamily: 'points',
+      threshold: 25,
+      odds: 1.72,
+    });
+    expect(slip.legs[1]).toMatchObject({
+      player: 'Josh Hart',
+      marketFamily: 'assists',
+      threshold: 2,
+      odds: 1.45,
+    });
+  });
+
+  it('does not confuse slip totals with per-leg odds', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 1450.00
+15 Legs • Stake $15.00
+Potential Winnings $21,750.00
+Victor Wembanyama
+To Score 25+ Points
+`);
+
+    expect(slip.totalOdds).toBe(1450);
+    expect(slip.stake).toBe(15);
+    expect(slip.potentialPayout).toBe(21750);
+    expect(slip.legs[0].odds).toBeUndefined();
+  });
+
+  it('parses bare low-threshold points, rebounds, assists, steals, and blocks labels', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 30.00
+Jayson Tatum
+2+ Points
+Josh Hart
+2+ Rebounds
+Tyrese Haliburton
+2+ Assists
+Alex Caruso
+1+ Steals
+Victor Wembanyama
+2+ Blocks
+`);
+
+    expect(slip.legs).toHaveLength(5);
+    expect(slip.legs.map((leg) => [leg.marketFamily, leg.threshold])).toEqual([
+      ['points', 2],
+      ['rebounds', 2],
+      ['assists', 2],
+      ['steals', 1],
+      ['blocks', 2],
+    ]);
+  });
+
   it('skips arbitrary OCR text between player and real market label', () => {
     const slip = parseSlipText(`
 Same Game Multi @ 21.00

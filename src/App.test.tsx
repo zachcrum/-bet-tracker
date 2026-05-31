@@ -43,6 +43,30 @@ describe('App', () => {
     expect(within(history).getByText('Stake $0.00')).toBeInTheDocument();
   });
 
+  it('settles a saved slip and updates result metrics in storage-backed history', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.type(screen.getByLabelText('Sportsbet slip text'), slipText);
+    await user.click(screen.getByRole('button', { name: 'Analyze Slip' }));
+    await user.click(screen.getByRole('button', { name: 'Save Slip' }));
+
+    const history = screen.getByRole('region', { name: 'History' });
+    await user.type(within(history).getByLabelText('Profit/loss for Same Game Multi @ 10.00'), '25');
+    await user.click(within(history).getByRole('button', { name: 'Settle Same Game Multi @ 10.00' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('Slip settled.');
+    expect(within(history).getByText('settled')).toBeInTheDocument();
+    expect(within(history).getByText('P/L').nextSibling).toHaveTextContent('$25.00');
+    expect(within(history).getByText('Settled').nextSibling).toHaveTextContent('1');
+
+    const savedSlips = JSON.parse(window.localStorage.getItem('nba-multi-assistant-slips') ?? '[]');
+    expect(savedSlips[0]).toMatchObject({
+      status: 'settled',
+      profitLoss: 25,
+    });
+  });
+
   it('shows OCR errors and clears them after a successful analyze', async () => {
     const user = userEvent.setup();
     vi.mocked(readSlipImage).mockRejectedValueOnce(new Error('OCR unavailable'));

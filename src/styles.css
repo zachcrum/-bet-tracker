@@ -348,6 +348,21 @@ th,
   gap: 8px;
 }
 
+.settle-form {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(96px, 1fr) auto;
+}
+
+.settle-form input {
+  border: 1px solid #c7d3da;
+  border-radius: 8px;
+  min-height: 40px;
+  padding: 0 10px;
+  width: 100%;
+}
+
 @media (max-width: 900px) {
   .dashboard-grid {
     grid-template-columns: 1fr;

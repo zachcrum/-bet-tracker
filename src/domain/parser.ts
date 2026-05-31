@@ -2,11 +2,16 @@ import type { MarketFamily, NormalizedLeg, Slip } from './types';
 
 const MARKET_PATTERNS: Array<{ family: MarketFamily; pattern: RegExp }> = [
   { family: 'points', pattern: /(?:score|record)\s+(\d+(?:\.\d+)?)\+\s+points?/i },
+  { family: 'points', pattern: /^(\d+(?:\.\d+)?)\+\s+points?$/i },
   { family: 'rebounds', pattern: /record\s+(\d+(?:\.\d+)?)\+\s+rebounds?/i },
+  { family: 'rebounds', pattern: /^(\d+(?:\.\d+)?)\+\s+rebounds?$/i },
   { family: 'assists', pattern: /record\s+(\d+(?:\.\d+)?)\+\s+assists?/i },
+  { family: 'assists', pattern: /^(\d+(?:\.\d+)?)\+\s+assists?$/i },
   { family: 'threes', pattern: /(\d+(?:\.\d+)?)\+\s+made\s+threes?/i },
   { family: 'steals', pattern: /record\s+(\d+(?:\.\d+)?)\+\s+steals?/i },
+  { family: 'steals', pattern: /^(\d+(?:\.\d+)?)\+\s+steals?$/i },
   { family: 'blocks', pattern: /record\s+(\d+(?:\.\d+)?)\+\s+blocks?/i },
+  { family: 'blocks', pattern: /^(\d+(?:\.\d+)?)\+\s+blocks?$/i },
 ];
 
 const NON_LEG_PREFIXES = [
@@ -64,6 +69,9 @@ export function parseSlipText(text: string): Slip {
 
     const label = candidateLines[labelIndex];
     const parsedMarket = parseMarketLabel(label);
+    const oddsAfterLabel = parseOddsLine(candidateLines[labelIndex + 1]);
+    const odds = findSkippedLegOdds(candidateLines, index + 1, labelIndex) ?? oddsAfterLabel;
+    const sourceEndIndex = oddsAfterLabel === undefined ? labelIndex : labelIndex + 1;
     legs.push({
       id: `leg-${legs.length + 1}`,
       player,
@@ -71,10 +79,11 @@ export function parseSlipText(text: string): Slip {
       marketFamily: parsedMarket.family,
       threshold: parsedMarket.threshold,
       label,
-      sourceText: candidateLines.slice(index, labelIndex + 1).join('\n'),
+      odds,
+      sourceText: candidateLines.slice(index, sourceEndIndex + 1).join('\n'),
     });
 
-    index = labelIndex;
+    index = sourceEndIndex;
   }
 
   return {
@@ -149,7 +158,27 @@ function hasKnownMarketAhead(lines: string[], startIndex: number): boolean {
 
 function isSkippableNoiseLine(line: string): boolean {
   const lower = line.toLowerCase();
-  return NOISE_PREFIXES.some((prefix) => lower.startsWith(prefix)) || /^\$?[\d,.]+$/.test(line);
+  return NOISE_PREFIXES.some((prefix) => lower.startsWith(prefix)) || parseOddsLine(line) !== undefined || /^\$?[\d,.]+$/.test(line);
+}
+
+function findSkippedLegOdds(lines: string[], startIndex: number, labelIndex: number): number | undefined {
+  for (let index = startIndex; index < labelIndex; index += 1) {
+    const odds = parseOddsLine(lines[index]);
+    if (odds !== undefined) {
+      return odds;
+    }
+  }
+
+  return undefined;
+}
+
+function parseOddsLine(line: string | undefined): number | undefined {
+  const match = line?.match(/^@?\s*\$?(\d+\.\d+)$/);
+  if (!match) {
+    return undefined;
+  }
+
+  return Number(match[1]);
 }
 
 function parseMarketLabel(label: string): { family: MarketFamily; threshold?: number } {

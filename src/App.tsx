@@ -68,6 +68,27 @@ export default function App() {
     }
   }
 
+  function settleSavedSlip(slip: SavedSlip, profitLoss: number) {
+    const settledSlip: SavedSlip = {
+      ...slip,
+      status: 'settled',
+      profitLoss,
+    };
+
+    try {
+      const didUpdate = storage.updateSlip(settledSlip);
+      if (!didUpdate) {
+        setMessage({ type: 'error', text: 'Could not find that saved slip. Refresh and try again.' });
+        return;
+      }
+
+      setSavedSlips(storage.loadSlips());
+      setMessage({ type: 'success', text: 'Slip settled.' });
+    } catch {
+      setMessage({ type: 'error', text: 'Could not update slip. Check browser storage and try again.' });
+    }
+  }
+
   const canSave = Boolean(diagnosis && diagnosis.slip.legs.length > 0);
 
   return (
@@ -91,7 +112,7 @@ export default function App() {
           <SlipInput onSubmitText={analyzeText} onUploadImage={uploadImage} isReadingImage={isReadingImage} />
           <SlipSummary diagnosis={diagnosis} />
           <ChatPanel diagnosis={diagnosis} />
-          <HistoryPanel slips={savedSlips} />
+          <HistoryPanel slips={savedSlips} onSettleSlip={settleSavedSlip} />
         </div>
         <div className="right-column">
           <LegTable legs={diagnosis?.ratedLegs ?? []} />

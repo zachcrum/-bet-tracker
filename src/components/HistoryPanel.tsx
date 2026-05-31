@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { summarizeResults } from '../domain/results';
 import type { SavedSlip } from '../domain/types';
 
 interface HistoryPanelProps {
   slips: SavedSlip[];
+  onSettleSlip?: (slip: SavedSlip, profitLoss: number) => void;
 }
 
-export function HistoryPanel({ slips }: HistoryPanelProps) {
+export function HistoryPanel({ slips, onSettleSlip }: HistoryPanelProps) {
+  const [profitLossBySlip, setProfitLossBySlip] = useState<Record<string, string>>({});
   const summary = summarizeResults(slips);
 
   return (
@@ -45,7 +48,41 @@ export function HistoryPanel({ slips }: HistoryPanelProps) {
                 <span>
                   {slip.legs.length} {slip.legs.length === 1 ? 'leg' : 'legs'}
                 </span>
+                {Number.isFinite(slip.profitLoss) ? <span>P/L {formatMoney(slip.profitLoss)}</span> : null}
               </div>
+              <form
+                className="settle-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const profitLoss = Number(profitLossBySlip[slipKey(slip)] ?? slip.profitLoss ?? '');
+                  if (Number.isFinite(profitLoss)) {
+                    onSettleSlip?.(slip, profitLoss);
+                  }
+                }}
+              >
+                <input
+                  aria-label={`Profit/loss for ${slip.title}`}
+                  inputMode="decimal"
+                  placeholder="P/L"
+                  type="number"
+                  step="0.01"
+                  value={profitLossBySlip[slipKey(slip)] ?? formatInputValue(slip.profitLoss)}
+                  onChange={(event) =>
+                    setProfitLossBySlip((current) => ({
+                      ...current,
+                      [slipKey(slip)]: event.target.value,
+                    }))
+                  }
+                />
+                <button
+                  type="submit"
+                  className="secondary-button"
+                  disabled={!onSettleSlip}
+                  aria-label={`Settle ${slip.title}`}
+                >
+                  Settle
+                </button>
+              </form>
             </li>
           ))}
         </ul>
@@ -56,6 +93,14 @@ export function HistoryPanel({ slips }: HistoryPanelProps) {
 
 function formatMoney(value: number | undefined): string {
   return value === undefined ? '-' : `$${value.toFixed(2)}`;
+}
+
+function formatInputValue(value: number | undefined): string {
+  return Number.isFinite(value) ? String(value) : '';
+}
+
+function slipKey(slip: SavedSlip): string {
+  return `${slip.id}-${slip.savedAt}`;
 }
 
 function formatSavedDate(savedAt: string): string {
