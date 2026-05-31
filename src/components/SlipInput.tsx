@@ -1,5 +1,5 @@
 import { ImageUp, ScanText } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 interface SlipInputProps {
   onSubmitText(text: string): void;
@@ -9,6 +9,7 @@ interface SlipInputProps {
 
 export function SlipInput({ onSubmitText, onUploadImage, isReadingImage }: SlipInputProps) {
   const [text, setText] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <section className="panel">
@@ -33,20 +34,33 @@ export function SlipInput({ onSubmitText, onUploadImage, isReadingImage }: SlipI
           <ScanText size={18} />
           Analyze Slip
         </button>
-        <label className="secondary-button">
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={isReadingImage}
+          onClick={() => fileInputRef.current?.click()}
+        >
           <ImageUp size={18} />
           {isReadingImage ? 'Reading Image' : 'Upload Screenshot'}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                onUploadImage(file);
-              }
-            }}
-          />
+        </button>
+        <label className="visually-hidden" htmlFor="slip-screenshot">
+          Upload Screenshot
         </label>
+        <input
+          ref={fileInputRef}
+          id="slip-screenshot"
+          className="visually-hidden"
+          type="file"
+          accept="image/*"
+          disabled={isReadingImage}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file && !isReadingImage) {
+              onUploadImage(file);
+            }
+          }}
+        />
       </div>
     </section>
   );

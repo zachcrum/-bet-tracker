@@ -9,9 +9,9 @@ export function HistoryPanel({ slips }: HistoryPanelProps) {
   const summary = summarizeResults(slips);
 
   return (
-    <section className="panel">
+    <section className="panel" aria-labelledby="history-heading">
       <div className="panel-heading">
-        <h2>History</h2>
+        <h2 id="history-heading">History</h2>
         <span className="eyebrow">{slips.length} saved</span>
       </div>
       <div className="metrics-grid">
@@ -28,6 +28,41 @@ export function HistoryPanel({ slips }: HistoryPanelProps) {
           <strong>{summary.settledCount}</strong>
         </div>
       </div>
+      {slips.length === 0 ? (
+        <p className="empty-copy">Saved slips will appear here.</p>
+      ) : (
+        <ul className="history-list">
+          {slips.map((slip) => (
+            <li key={`${slip.id}-${slip.savedAt}`} className="history-item">
+              <div>
+                <strong>{slip.title}</strong>
+                <span>{formatSavedDate(slip.savedAt)}</span>
+              </div>
+              <div className="history-meta">
+                <span className="risk-tag">{slip.status}</span>
+                <span>Stake {formatMoney(slip.stake)}</span>
+                <span>Odds {slip.totalOdds?.toFixed(2) ?? '-'}</span>
+                <span>
+                  {slip.legs.length} {slip.legs.length === 1 ? 'leg' : 'legs'}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
+}
+
+function formatMoney(value: number | undefined): string {
+  return value === undefined ? '-' : `$${value.toFixed(2)}`;
+}
+
+function formatSavedDate(savedAt: string): string {
+  const date = new Date(savedAt);
+  if (Number.isNaN(date.getTime())) {
+    return savedAt;
+  }
+
+  return date.toLocaleDateString();
 }

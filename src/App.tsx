@@ -13,11 +13,13 @@ import { readSlipImage } from './services/ocr';
 import { createSlipStorage } from './services/storage';
 
 const storage = createSlipStorage();
+type AppMessage = { type: 'success' | 'error'; text: string };
 
 export default function App() {
   const [diagnosis, setDiagnosis] = useState<SlipDiagnosis>();
   const [savedSlips, setSavedSlips] = useState<SavedSlip[]>(() => storage.loadSlips());
   const [isReadingImage, setIsReadingImage] = useState(false);
+  const [message, setMessage] = useState<AppMessage>();
 
   const suggestions = useMemo(
     () => (diagnosis ? buildMultiSuggestions(diagnosis.ratedLegs) : []),
@@ -27,27 +29,46 @@ export default function App() {
   function analyzeText(text: string) {
     const slip = parseSlipText(text);
     setDiagnosis(diagnoseSlip(slip));
+    setMessage(undefined);
   }
 
   async function uploadImage(file: File) {
+    if (isReadingImage) {
+      return;
+    }
+
     setIsReadingImage(true);
+    setMessage(undefined);
     try {
       const text = await readSlipImage(file);
       analyzeText(text);
+    } catch {
+      setMessage({
+        type: 'error',
+        text: 'Could not read screenshot. Try another image or paste the slip text.',
+      });
     } finally {
       setIsReadingImage(false);
     }
   }
 
   function saveCurrentSlip(status: SavedSlip['status']) {
-    if (!diagnosis) {
+    if (!diagnosis || diagnosis.slip.legs.length === 0) {
+      setMessage({ type: 'error', text: 'Analyze a slip with at least one leg before saving.' });
       return;
     }
 
     const saved = toSavedSlip(diagnosis.slip, status);
-    storage.saveSlip(saved);
-    setSavedSlips(storage.loadSlips());
+    try {
+      storage.saveSlip(saved);
+      setSavedSlips(storage.loadSlips());
+      setMessage({ type: 'success', text: 'Slip saved.' });
+    } catch {
+      setMessage({ type: 'error', text: 'Could not save slip. Check browser storage and try again.' });
+    }
   }
+
+  const canSave = Boolean(diagnosis && diagnosis.slip.legs.length > 0);
 
   return (
     <main className="app-shell">
@@ -56,10 +77,15 @@ export default function App() {
           <h1>NBA Multi Assistant</h1>
           <p>Rate long Sportsbet same-game multis before you place them.</p>
         </div>
-        <button type="button" className="primary-button" onClick={() => saveCurrentSlip('suggested')}>
+        <button type="button" className="primary-button" disabled={!canSave} onClick={() => saveCurrentSlip('suggested')}>
           Save Slip
         </button>
       </header>
+      {message ? (
+        <div className={`app-message ${message.type}`} role={message.type === 'error' ? 'alert' : 'status'}>
+          {message.text}
+        </div>
+      ) : null}
       <div className="dashboard-grid">
         <div className="left-column">
           <SlipInput onSubmitText={analyzeText} onUploadImage={uploadImage} isReadingImage={isReadingImage} />

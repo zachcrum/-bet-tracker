@@ -12,6 +12,9 @@ export function MultiBuilderPanel({ suggestions }: MultiBuilderPanelProps) {
         <h2>Generated Multis</h2>
         <span className="eyebrow">Compare modes</span>
       </div>
+      {suggestions.length === 0 ? (
+        <p className="empty-copy">Generated multis will appear after a slip has rated legs.</p>
+      ) : null}
       <div className="multi-grid">
         {suggestions.map((suggestion) => (
           <article key={suggestion.id} className="multi-card">

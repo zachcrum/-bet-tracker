@@ -12,6 +12,9 @@ export function LegTable({ legs }: LegTableProps) {
         <h2>Line Ratings</h2>
         <span className="eyebrow">{legs.length} rated</span>
       </div>
+      {legs.length === 0 ? (
+        <p className="empty-copy">Analyze a slip to see each leg rated by score, probability, and confidence.</p>
+      ) : null}
       <div className="table-wrap">
         <table>
           <thead>

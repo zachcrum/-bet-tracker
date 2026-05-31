@@ -13,4 +13,11 @@ describe('SlipInput', () => {
 
     expect(onSubmit).toHaveBeenCalledWith('Same Game Multi @ 10.00');
   });
+
+  it('disables screenshot upload while reading an image', () => {
+    render(<SlipInput onSubmitText={vi.fn()} onUploadImage={vi.fn()} isReadingImage={true} />);
+
+    expect(screen.getByLabelText('Upload Screenshot')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reading Image' })).toBeDisabled();
+  });
 });

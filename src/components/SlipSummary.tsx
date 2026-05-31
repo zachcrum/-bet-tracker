@@ -24,7 +24,7 @@ export function SlipSummary({ diagnosis }: SlipSummaryProps) {
       <div className="metrics-grid">
         <div>
           <span>Stake</span>
-          <strong>{diagnosis.slip.stake ? `$${diagnosis.slip.stake.toFixed(2)}` : '-'}</strong>
+          <strong>{formatMoney(diagnosis.slip.stake)}</strong>
         </div>
         <div>
           <span>Odds</span>
@@ -32,7 +32,7 @@ export function SlipSummary({ diagnosis }: SlipSummaryProps) {
         </div>
         <div>
           <span>Potential</span>
-          <strong>{diagnosis.slip.potentialPayout ? `$${diagnosis.slip.potentialPayout.toLocaleString()}` : '-'}</strong>
+          <strong>{formatMoney(diagnosis.slip.potentialPayout)}</strong>
         </div>
       </div>
       <div className="tag-row">
@@ -44,4 +44,8 @@ export function SlipSummary({ diagnosis }: SlipSummaryProps) {
       </div>
     </section>
   );
+}
+
+function formatMoney(value: number | undefined): string {
+  return value === undefined ? '-' : `$${value.toFixed(2)}`;
 }
