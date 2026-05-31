@@ -1,9 +1,31 @@
 import type { SavedSlip } from '../domain/types';
 
+const validStatuses = new Set<SavedSlip['status']>(['suggested', 'placed', 'settled']);
+
 export interface SlipStorage {
   loadSlips(): SavedSlip[];
   saveSlip(slip: SavedSlip): void;
   updateSlip(slip: SavedSlip): boolean;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isSavedSlip(value: unknown): value is SavedSlip {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === 'string' &&
+    typeof value.title === 'string' &&
+    typeof value.savedAt === 'string' &&
+    typeof value.status === 'string' &&
+    validStatuses.has(value.status as SavedSlip['status']) &&
+    Array.isArray(value.legs) &&
+    isRecord(value.legResults)
+  );
 }
 
 export function createSlipStorage(key = 'nba-multi-assistant-slips'): SlipStorage {
@@ -16,7 +38,7 @@ export function createSlipStorage(key = 'nba-multi-assistant-slips'): SlipStorag
 
       try {
         const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? (parsed as SavedSlip[]) : [];
+        return Array.isArray(parsed) ? parsed.filter(isSavedSlip) : [];
       } catch {
         return [];
       }

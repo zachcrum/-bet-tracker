@@ -1,6 +1,15 @@
 import type { SavedSlip } from '../domain/types';
 import { createSlipStorage } from './storage';
 
+const validSlip: SavedSlip = {
+  id: 'slip-1',
+  title: 'Saved slip',
+  savedAt: '2026-05-31T00:00:00.000Z',
+  status: 'suggested',
+  legs: [],
+  legResults: {},
+};
+
 describe('createSlipStorage', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -8,17 +17,9 @@ describe('createSlipStorage', () => {
 
   it('saves and loads slips', () => {
     const storage = createSlipStorage('test-slips');
-    const slip: SavedSlip = {
-      id: 'slip-1',
-      title: 'Saved slip',
-      savedAt: '2026-05-31T00:00:00.000Z',
-      status: 'suggested',
-      legs: [],
-      legResults: {},
-    };
 
-    storage.saveSlip(slip);
-    expect(storage.loadSlips()).toEqual([slip]);
+    storage.saveSlip(validSlip);
+    expect(storage.loadSlips()).toEqual([validSlip]);
   });
 
   it.each([
@@ -31,6 +32,74 @@ describe('createSlipStorage', () => {
     const storage = createSlipStorage('test-slips');
 
     expect(storage.loadSlips()).toEqual([]);
+  });
+
+  it.each([
+    ['null entry', [null]],
+    ['empty object entry', [{}]],
+  ])('returns an empty list for arrays with %s', (_name, storedValue) => {
+    window.localStorage.setItem('test-slips', JSON.stringify(storedValue));
+    const storage = createSlipStorage('test-slips');
+
+    expect(storage.loadSlips()).toEqual([]);
+  });
+
+  it('filters invalid array records while keeping valid slips', () => {
+    const validPlacedSlip: SavedSlip = {
+      ...validSlip,
+      id: 'slip-2',
+      title: 'Placed slip',
+      status: 'placed',
+    };
+
+    window.localStorage.setItem(
+      'test-slips',
+      JSON.stringify([
+        null,
+        {},
+        { ...validSlip, id: 123 },
+        { ...validSlip, title: null },
+        { ...validSlip, savedAt: 123 },
+        { ...validSlip, status: 'closed' },
+        { ...validSlip, legs: {} },
+        { ...validSlip, legResults: null },
+        validPlacedSlip,
+      ]),
+    );
+
+    const storage = createSlipStorage('test-slips');
+
+    expect(storage.loadSlips()).toEqual([validPlacedSlip]);
+  });
+
+  it('does not crash when saving after malformed array entries', () => {
+    window.localStorage.setItem('test-slips', JSON.stringify([null, {}, validSlip]));
+    const storage = createSlipStorage('test-slips');
+    const newestSlip: SavedSlip = {
+      ...validSlip,
+      id: 'slip-2',
+      title: 'Newest slip',
+    };
+
+    expect(() => storage.saveSlip(newestSlip)).not.toThrow();
+    expect(storage.loadSlips()).toEqual([newestSlip, validSlip]);
+  });
+
+  it('does not crash when updating after malformed array entries', () => {
+    window.localStorage.setItem('test-slips', JSON.stringify([null, {}, validSlip]));
+    const storage = createSlipStorage('test-slips');
+    const updatedSlip: SavedSlip = {
+      ...validSlip,
+      status: 'settled',
+      profitLoss: 10,
+    };
+    let updateResult: boolean | undefined;
+
+    expect(() => {
+      updateResult = storage.updateSlip(updatedSlip);
+    }).not.toThrow();
+    expect(updateResult).toBe(true);
+    expect(storage.loadSlips()).toEqual([updatedSlip]);
   });
 
   it('saves newest slips first and replaces duplicate ids', () => {
@@ -66,21 +135,13 @@ describe('createSlipStorage', () => {
 
   it('updates an existing slip and returns true', () => {
     const storage = createSlipStorage('test-slips');
-    const slip: SavedSlip = {
-      id: 'slip-1',
-      title: 'Saved slip',
-      savedAt: '2026-05-31T00:00:00.000Z',
-      status: 'suggested',
-      legs: [],
-      legResults: {},
-    };
     const updatedSlip: SavedSlip = {
-      ...slip,
+      ...validSlip,
       status: 'settled',
       profitLoss: 10,
     };
 
-    storage.saveSlip(slip);
+    storage.saveSlip(validSlip);
 
     expect(storage.updateSlip(updatedSlip)).toBe(true);
     expect(storage.loadSlips()).toEqual([updatedSlip]);
@@ -88,16 +149,8 @@ describe('createSlipStorage', () => {
 
   it('does not save a missing slip update and returns false', () => {
     const storage = createSlipStorage('test-slips');
-    const slip: SavedSlip = {
-      id: 'slip-1',
-      title: 'Saved slip',
-      savedAt: '2026-05-31T00:00:00.000Z',
-      status: 'suggested',
-      legs: [],
-      legResults: {},
-    };
 
-    expect(storage.updateSlip(slip)).toBe(false);
+    expect(storage.updateSlip(validSlip)).toBe(false);
     expect(storage.loadSlips()).toEqual([]);
   });
 });
