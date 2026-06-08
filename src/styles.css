@@ -155,6 +155,41 @@ textarea {
   color: #16242f;
 }
 
+.featured-bet-list {
+  display: grid;
+  gap: 8px;
+}
+
+.featured-bet-button {
+  background: #f7fafb;
+  border: 1px solid #d8e1e6;
+  border-radius: 8px;
+  color: #16242f;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.featured-bet-button.selected {
+  background: #eaf5fb;
+  border-color: #0b67a3;
+  box-shadow: inset 3px 0 0 #0b67a3;
+}
+
+.featured-bet-button strong,
+.featured-bet-button span {
+  display: block;
+}
+
+.featured-bet-button span {
+  color: #536471;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .visually-hidden {
   clip: rect(0 0 0 0);
   border: 0;

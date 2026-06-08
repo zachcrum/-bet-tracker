@@ -5,6 +5,7 @@ import { LegTable } from './components/LegTable';
 import { MultiBuilderPanel } from './components/MultiBuilderPanel';
 import { SlipInput } from './components/SlipInput';
 import { SlipSummary } from './components/SlipSummary';
+import { game3, game3Bets, type FeaturedBet } from './data/game3Bets';
 import { diagnoseSlip } from './domain/diagnosis';
 import { buildMultiSuggestions } from './domain/multiBuilder';
 import { parseSlipText } from './domain/parser';
@@ -16,7 +17,8 @@ const storage = createSlipStorage();
 type AppMessage = { type: 'success' | 'error'; text: string };
 
 export default function App() {
-  const [diagnosis, setDiagnosis] = useState<SlipDiagnosis>();
+  const [selectedFeaturedBetId, setSelectedFeaturedBetId] = useState(game3Bets[0].id);
+  const [diagnosis, setDiagnosis] = useState<SlipDiagnosis>(() => diagnoseFeaturedBet(game3Bets[0]));
   const [savedSlips, setSavedSlips] = useState<SavedSlip[]>(() => storage.loadSlips());
   const [isReadingImage, setIsReadingImage] = useState(false);
   const [message, setMessage] = useState<AppMessage>();
@@ -29,6 +31,13 @@ export default function App() {
   function analyzeText(text: string) {
     const slip = parseSlipText(text);
     setDiagnosis(diagnoseSlip(slip));
+    setSelectedFeaturedBetId('');
+    setMessage(undefined);
+  }
+
+  function analyzeFeaturedBet(bet: FeaturedBet) {
+    setSelectedFeaturedBetId(bet.id);
+    setDiagnosis(diagnoseFeaturedBet(bet));
     setMessage(undefined);
   }
 
@@ -96,7 +105,9 @@ export default function App() {
       <header className="topbar">
         <div>
           <h1>NBA Multi Assistant</h1>
-          <p>Rate long Sportsbet same-game multis before you place them.</p>
+          <p>
+            {game3.label} - {game3.game} - {game3.tipoff}
+          </p>
         </div>
         <button type="button" className="primary-button" disabled={!canSave} onClick={() => saveCurrentSlip('suggested')}>
           Save Slip
@@ -109,6 +120,32 @@ export default function App() {
       ) : null}
       <div className="dashboard-grid">
         <div className="left-column">
+          <section className="panel featured-bets" aria-labelledby="featured-bets-heading">
+            <div className="panel-heading">
+              <h2 id="featured-bets-heading">Current Bets</h2>
+              <span className="eyebrow">Sportsbet Game 3</span>
+            </div>
+            <div className="featured-bet-list">
+              {game3Bets.map((bet) => {
+                const isSelected = bet.id === selectedFeaturedBetId;
+                return (
+                  <button
+                    key={bet.id}
+                    type="button"
+                    className={`featured-bet-button ${isSelected ? 'selected' : ''}`}
+                    aria-pressed={isSelected}
+                    onClick={() => analyzeFeaturedBet(bet)}
+                  >
+                    <strong>{bet.name}</strong>
+                    <span>
+                      {bet.legCount} legs - ${bet.stake.toFixed(2)} stake - placed {bet.placedAt}
+                    </span>
+                    {bet.note ? <span>{bet.note}</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
           <SlipInput onSubmitText={analyzeText} onUploadImage={uploadImage} isReadingImage={isReadingImage} />
           <SlipSummary diagnosis={diagnosis} />
           <ChatPanel diagnosis={diagnosis} />
@@ -121,6 +158,15 @@ export default function App() {
       </div>
     </main>
   );
+}
+
+function diagnoseFeaturedBet(bet: FeaturedBet): SlipDiagnosis {
+  const slip = {
+    ...parseSlipText(bet.text),
+    placedAt: bet.placedAt,
+  };
+
+  return diagnoseSlip(slip);
 }
 
 function toSavedSlip(slip: Slip, status: SavedSlip['status']): SavedSlip {

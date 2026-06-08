@@ -1,4 +1,5 @@
 import { parseSlipText } from './parser';
+import { game3Bets } from '../data/game3Bets';
 
 const sampleSlip = `
 Same Game Multi @ 1450.00
@@ -249,6 +250,70 @@ To Record 2+ Steals
       player: 'José Alvarado',
       marketFamily: 'steals',
       threshold: 2,
+    });
+  });
+
+  it('preserves curly apostrophes in player names', () => {
+    const slip = parseSlipText(`
+Same Game Multi @ 14.00
+De\u2019Aaron Fox
+To Score 15+ Points
+`);
+
+    expect(slip.legs[0]).toMatchObject({
+      player: 'De\u2019Aaron Fox',
+      marketFamily: 'points',
+      threshold: 15,
+    });
+  });
+
+  it('parses the Game 3 bonus-back 18-leg multi', () => {
+    const slip = parseSlipText(game3Bets[0].text);
+
+    expect(slip.game).toBe('San Antonio Spurs @ New York Knicks');
+    expect(slip.totalOdds).toBe(1351);
+    expect(slip.stake).toBe(15);
+    expect(slip.potentialPayout).toBe(20265);
+    expect(slip.legs).toHaveLength(18);
+    expect(slip.legs[0]).toMatchObject({
+      player: 'Jalen Brunson',
+      marketFamily: 'points',
+      threshold: 25,
+    });
+    expect(slip.legs[4]).toMatchObject({
+      player: 'Victor Wembanyama',
+      marketFamily: 'rebounds',
+      threshold: 12,
+    });
+    expect(slip.legs[17]).toMatchObject({
+      player: 'Jalen Brunson',
+      marketFamily: 'steals',
+      threshold: 1,
+    });
+  });
+
+  it('parses the Game 3 points and boards 16-leg multi', () => {
+    const slip = parseSlipText(game3Bets[1].text);
+
+    expect(slip.game).toBe('San Antonio Spurs @ New York Knicks');
+    expect(slip.totalOdds).toBe(1351);
+    expect(slip.stake).toBe(15);
+    expect(slip.potentialPayout).toBe(20265);
+    expect(slip.legs).toHaveLength(16);
+    expect(slip.legs[0]).toMatchObject({
+      player: 'Karl-Anthony Towns',
+      marketFamily: 'points',
+      threshold: 20,
+    });
+    expect(slip.legs[11]).toMatchObject({
+      player: 'Karl-Anthony Towns',
+      marketFamily: 'rebounds',
+      threshold: 10,
+    });
+    expect(slip.legs[15]).toMatchObject({
+      player: 'Devin Vassell',
+      marketFamily: 'rebounds',
+      threshold: 4,
     });
   });
 

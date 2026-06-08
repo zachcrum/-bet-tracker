@@ -1,6 +1,5 @@
-import { createWorker } from 'tesseract.js';
-
 export async function readSlipImage(file: File): Promise<string> {
+  const { createWorker } = await loadTesseract();
   const worker = await createWorker('eng');
   let text: string;
 
@@ -19,4 +18,13 @@ export async function readSlipImage(file: File): Promise<string> {
 
   await worker.terminate();
   return text;
+}
+
+async function loadTesseract(): Promise<typeof import('tesseract.js')> {
+  if (import.meta.env.PROD) {
+    const productionOcrUrl = 'https://esm.sh/tesseract.js@5.1.1';
+    return import(/* @vite-ignore */ productionOcrUrl) as Promise<typeof import('tesseract.js')>;
+  }
+
+  return import('tesseract.js');
 }

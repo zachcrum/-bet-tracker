@@ -107,7 +107,7 @@ function extractNumberAfter(text: string, pattern: RegExp): number | undefined {
 }
 
 function looksLikePlayerName(line: string): boolean {
-  return /^\p{Lu}[\p{L}'.-]+(?:\s+\p{Lu}[\p{L}'.-]+)+$/u.test(line);
+  return /^\p{Lu}[\p{L}'.\u2019-]+(?:\s+\p{Lu}[\p{L}'.\u2019-]+)+$/u.test(line);
 }
 
 function findMarketLabelIndex(lines: string[], startIndex: number): number | undefined {

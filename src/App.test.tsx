@@ -22,12 +22,31 @@ describe('App', () => {
     vi.mocked(readSlipImage).mockReset();
   });
 
+  it('loads the Game 3 first bet by default and switches to the second bet', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    expect(screen.getByText('Game 3 - San Antonio Spurs @ New York Knicks - Tuesday, 9 Jun 10:40 AEST')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bet 1 - 18 leg bonus-back multi/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('heading', { name: 'Same Game Multi @ 1351.00' })).toBeInTheDocument();
+    expect(screen.getByText('Any legs fail, get a $15.00 Bonus Bet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save Slip' })).toBeEnabled();
+    expect(screen.getAllByText('Jalen Brunson').length).toBeGreaterThan(0);
+    expect(screen.getByText('To Score 25+ Points')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Bet 2 - 16 leg points and boards multi/i }));
+
+    expect(screen.getByRole('button', { name: /Bet 1 - 18 leg bonus-back multi/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: /Bet 2 - 16 leg points and boards multi/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByText('Karl-Anthony Towns').length).toBeGreaterThan(0);
+    expect(screen.getByText('To Score 20+ Points')).toBeInTheDocument();
+  });
+
   it('analyzes pasted text, saves valid slips, and shows confirmation plus history entry', async () => {
     const user = userEvent.setup();
     render(<App />);
 
     const saveButton = screen.getByRole('button', { name: 'Save Slip' });
-    expect(saveButton).toBeDisabled();
 
     await user.type(screen.getByLabelText('Sportsbet slip text'), slipText);
     await user.click(screen.getByRole('button', { name: 'Analyze Slip' }));
